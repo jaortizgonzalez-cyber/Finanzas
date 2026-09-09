@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel — Andrés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat SDK — funciona con <script> normal, sin bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#12151c; --panel:#191d26; --panel-2:#1f2430; --border:#262b38;
+    --text:#e7e9ee; --muted:#838a9a; --muted-2:#5b6272;
+    --accent:#e2a33b; --accent-dim:#3a3120;
+    --pos:#5fbf8f; --pos-dim:#1c2b22;
+    --neg:#f0645a; --neg-dim:#2e1c1c;
+    --info:#6fa8dc; --info-dim:#1c2530;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:48px;}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:480px;margin:0 auto;padding:0 16px;}
+
+  header{padding:22px 16px 18px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-size:12px;color:var(--muted-2);display:flex;justify-content:space-between;align-items:center;}
+  .eyebrow .accent-dot{color:var(--accent);}
+  .conn-status{font-size:11px;padding:3px 8px;border-radius:10px;}
+  .conn-status.connected{background:var(--pos-dim);color:var(--pos);}
+  .conn-status.pending{background:var(--panel-2);color:var(--muted);}
+  .conn-status.error{background:var(--neg-dim);color:var(--neg);}
+  .hero-num{font-family:'JetBrains Mono',monospace;font-size:40px;font-weight:600;line-height:1.1;margin-top:6px;letter-spacing:-0.01em;}
+  .hero-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+  .hero-sub .mono{color:var(--text);}
+
+  section{padding:20px 16px;border-bottom:1px solid var(--border);}
+  .sec-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .sec-title{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted-2);font-weight:600;}
+
+  .goal-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .goal-label{font-size:14px;}
+  .bar-track{height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1px solid var(--border);}
+  .bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s ease;}
+  .goal-input-row{display:flex;gap:8px;margin-top:12px;align-items:center;}
+  .goal-input-row label{font-size:12px;color:var(--muted);flex-shrink:0;}
+
+  input[type="number"], input[type="text"]{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:14px; padding:8px 10px; border-radius:6px; width:100%;
+  }
+  input:focus{outline:none;border-color:var(--accent);}
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+
+  .position{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:var(--panel);position:relative;}
+  .pos-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .pos-ticker-row{display:flex;gap:8px;align-items:center;}
+  .pos-ticker-input{width:90px;font-weight:600;font-size:14px;}
+  .pos-name-input{width:100px;font-size:11px;color:var(--muted);}
+  .pos-qty-input{width:44px;text-align:center;}
+  .pos-pnl{text-align:right;}
+  .pos-pnl-val{font-size:16px;font-weight:600;}
+  .pos-pnl-pct{font-size:12px;margin-top:2px;}
+  .pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .field-label{font-size:10px;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;display:block;}
+  .pos-levels{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .level-status{margin-top:10px;font-size:12px;padding:8px 10px;border-radius:6px;}
+  .level-status.ok{background:var(--pos-dim);color:var(--pos);}
+  .level-status.warn{background:var(--neg-dim);color:var(--neg);}
+  .level-status.neutral{background:var(--panel-2);color:var(--muted);}
+  .qty-cost-row{display:grid;grid-template-columns:60px 1fr;gap:10px;margin-bottom:10px;}
+
+  .del-btn{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted-2);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;}
+  .del-btn:active{color:var(--neg);}
+
+  .row-line{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);gap:8px;}
+  .row-line:last-of-type{border-bottom:none;}
+  .row-label-input{flex:1;font-size:13px;background:transparent;border:none;padding:4px 0;}
+  .row-label-input:focus{outline:none;border-bottom:1px solid var(--accent);}
+  .row-input{width:120px;text-align:right;flex-shrink:0;}
+  .total-row{display:flex;justify-content:space-between;padding-top:12px;margin-top:4px;border-top:1px solid var(--border);font-weight:600;}
+  .total-row .mono{font-size:15px;}
+
+  .debt-item{margin-bottom:16px;position:relative;padding-right:24px;}
+  .debt-item:last-child{margin-bottom:0;}
+  .debt-top{display:flex;justify-content:space-between;margin-bottom:6px;gap:8px;}
+  .debt-name-input{font-size:13px;flex:1;}
+  .debt-rate-input{font-size:11px;color:var(--muted-2);width:130px;text-align:right;}
+  .debt-bar-track{height:8px;background:var(--neg-dim);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+  .debt-bar-fill{height:100%;background:var(--pos);border-radius:4px;}
+  .debt-figs{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);}
+  .debt-edit{display:flex;gap:8px;margin-top:8px;}
+  .debt-edit input{font-size:12px;padding:6px 8px;}
+  .debt-edit label{font-size:10px;color:var(--muted-2);display:block;margin-bottom:3px;}
+
+  .cal-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .cal-item:last-child{border-bottom:none;}
+  .cal-item.next{background:var(--accent-dim);margin:0 -14px;padding:10px 14px;border-radius:8px;border-bottom:none;}
+  .cal-date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);flex-shrink:0;width:56px;}
+  .cal-body{flex:1;}
+  .cal-label{font-size:13px;}
+  .cal-ticker{font-size:11px;color:var(--muted-2);margin-top:1px;}
+  .cal-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;text-align:right;white-space:nowrap;}
+  .cal-count.soon{color:var(--accent);}
+
+  .pattern-box{background:var(--info-dim);border:1px solid #2a3b4d;border-radius:10px;padding:14px;}
+  .pattern-chain{font-size:13px;line-height:1.7;}
+  .pattern-chain .arrow{color:var(--info);margin:0 4px;}
+  .pattern-note{font-size:12px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid #2a3b4d;}
+
+  .log-form{display:flex;gap:8px;margin-bottom:14px;}
+  .log-form input:nth-child(1){width:80px;flex-shrink:0;}
+  .log-form input:nth-child(2){flex:1;}
+  .btn{background:var(--accent);color:#1a1408;border:none;border-radius:6px;padding:9px 14px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;flex-shrink:0;}
+  .btn:active{opacity:0.8;}
+  .btn-ghost{background:transparent;border:1px dashed var(--border);color:var(--muted);width:100%;padding:10px;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;cursor:pointer;margin-top:4px;}
+  .btn-ghost:active{border-color:var(--accent);color:var(--accent);}
+  .log-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px;}
+  .log-item:last-child{border-bottom:none;}
+  .log-empty{font-size:12px;color:var(--muted-2);font-style:italic;padding:6px 0;}
+  .log-del{color:var(--muted-2);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0;}
+
+  .setup-banner{background:var(--neg-dim);border:1px solid #4a2a28;border-radius:10px;padding:16px;margin:16px;font-size:13px;line-height:1.6;color:var(--text);}
+  .setup-banner code{background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);}
+  .setup-banner h3{margin:0 0 8px;font-size:14px;}
+
+  .nw-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+  .nw-box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+  .nw-box .nw-label{font-size:10px;color:var(--muted-2);text-transform:uppercase;letter-spacing:0.05em;}
+  .nw-box .nw-val{font-family:'JetBrains Mono',monospace;font-size:15px;margin-top:4px;}
+  .help-box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--muted);}
+  .help-box h4{color:var(--text);font-size:13px;margin:14px 0 6px;}
+  .help-box h4:first-child{margin-top:0;}
+  .help-box code{background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);}
+  .help-box ol,.help-box ul{margin:4px 0;padding-left:18px;}
+  .help-box li{margin-bottom:4px;}
+</style>
+</head>
+<body>
+
+<div id="setup-check"></div>
+
+<div class="wrap" id="app" style="display:none;">
+  <header>
+    <div class="eyebrow">
+      <span><span class="accent-dot">●</span> PANEL — <span id="today-label" class="mono"></span></span>
+      <span class="conn-status pending" id="conn-status">conectando…</span>
+    </div>
+    <div class="hero-num mono" id="hero-total">$0</div>
+    <div class="hero-sub">P&amp;L abierto hoy: <span class="mono" id="hero-pnl">$0</span></div>
+  </header>
+
+  <section>
+    <div class="sec-title">Patrimonio neto total</div>
+    <div class="hero-num mono" id="nw-total" style="font-size:32px;margin-top:8px;">$0</div>
+    <div class="nw-grid">
+      <div class="nw-box"><div class="nw-label">Activos totales</div><div class="nw-val" id="nw-assets">$0</div></div>
+      <div class="nw-box"><div class="nw-label">Deudas totales</div><div class="nw-val" id="nw-debts" style="color:var(--neg);">$0</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Presupuesto mensual</div></div>
+    <div class="row-line" style="border-bottom:2px solid var(--accent);padding-bottom:12px;margin-bottom:4px;">
+      <span class="row-label" style="font-weight:600;">Ingreso (día 22)</span>
+      <input type="number" class="mono row-input field" data-path="budget/ingreso" id="budget-ingreso-input" value="11000000">
+    </div>
+    <div id="budget-container"></div>
+    <button class="btn-ghost" onclick="addBudgetItem()">+ Agregar gasto</button>
+    <div class="total-row">
+      <span>Libre al mes</span>
+      <span class="mono" id="budget-libre">$0</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title">Meta mensual</div>
+    <div class="goal-row" style="margin-top:12px;">
+      <span class="goal-label">Cubrir Claude + triipro ($127.900)</span>
+      <span class="mono" id="goal-pct">0%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="goal-bar" style="width:0%"></div></div>
+    <div class="goal-input-row">
+      <label>Ganado este mes</label>
+      <input type="number" id="goal-earned" class="row-input" value="0">
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Posiciones abiertas</div></div>
+    <div id="positions-container"></div>
+    <button class="btn-ghost" onclick="addPosition()">+ Agregar posición</button>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Liquidez</div></div>
+    <div id="cash-container"></div>
+    <div class="total-row"><span>Total líquido</span><span class="mono" id="cash-total">$0</span></div>
+    <button class="btn-ghost" onclick="addCash()">+ Agregar cuenta</button>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Activos fijos (vivienda, vehículo, etc.)</div></div>
+    <div id="fixedassets-container"></div>
+    <div class="total-row"><span>Total activos fijos</span><span class="mono" id="fixedassets-total">$0</span></div>
+    <button class="btn-ghost" onclick="addFixedAsset()">+ Agregar activo</button>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Deudas</div></div>
+    <div id="debts-container"></div>
+    <button class="btn-ghost" onclick="addDebt()">+ Agregar deuda</button>
+  </section>
+
+  <section>
+    <div class="sec-title-row"><div class="sec-title">Declaración de renta</div></div>
+    <div id="renta-container"></div>
+    <button class="btn-ghost" onclick="addRentaItem()">+ Agregar dato</button>
+  </section>
+
+  <section>
+    <div class="sec-title">Calendario de catalizadores</div>
+    <div id="calendar-container"></div>
+  </section>
+
+  <section>
+    <div class="sec-title">Patrón geopolítico activo</div>
+    <div class="pattern-box">
+      <div class="pattern-chain">
+        Conflicto Irán / Ormuz<span class="arrow">→</span>petróleo sube<span class="arrow">→</span>inflación esperada sube<span class="arrow">→</span>prob. de alza de tasas Fed sube<span class="arrow">→</span>bitcoin y tech caen juntos
+      </div>
+      <div class="pattern-note">Se ha repetido en feb, abr, may y sep 2026. Cada escalada: caída de 3-5% en horas. Cada pausa/tregua: rebote fuerte. Revisar antes de operar si hay noticia reciente de Ormuz.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title">Bitácora de operaciones</div>
+    <div class="log-form">
+      <input type="text" id="log-ticker" placeholder="Ticker">
+      <input type="text" id="log-note" placeholder="Resultado / nota">
+      <button class="btn" onclick="addLogEntry()">+</button>
+    </div>
+    <div id="log-container"></div>
+  </section>
+
+  <section>
+    <div class="sec-title">Cómo usar este panel</div>
+    <div class="help-box">
+      <h4>Actualizar un dato</h4>
+      Toque cualquier número o texto y escriba encima. Se guarda solo — no hay botón de guardar. El cambio aparece de inmediato en cualquier otro celular o computador donde tenga el panel abierto.
+
+      <h4>Agregar algo nuevo</h4>
+      Use los botones <code>+ Agregar...</code> al final de cada sección (posición, cuenta, deuda, activo, gasto). Crea una fila nueva en blanco lista para editar.
+
+      <h4>Borrar algo</h4>
+      Toque la <code>×</code> junto al elemento. Es inmediato y no se puede deshacer.
+
+      <h4>Piso y objetivo de una posición</h4>
+      Son solo referencia visual — el panel le avisa con un color si el precio actual ya los tocó, pero no vende nada automáticamente. Usted sigue vendiendo desde Trii.
+
+      <h4>Cuando llegue la declaración de renta</h4>
+      Copie ahí el patrimonio bruto, patrimonio líquido, y cualquier activo (vivienda, vehículo) a su valor comercial real en la sección "Activos fijos" y "Declaración de renta". El patrimonio neto de arriba se recalcula solo.
+
+      <h4>Primera vez conectando Firebase</h4>
+      <ol>
+        <li>Vaya a <code>console.firebase.google.com</code> → cree un proyecto</li>
+        <li>Build → <code>Realtime Database</code> → crear, modo bloqueado</li>
+        <li>En la pestaña Reglas, pegue:<br><code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code></li>
+        <li>Build → <code>Authentication</code> → Sign-in method → habilite <code>Anonymous</code></li>
+        <li>⚙ Configuración del proyecto → Sus apps → cree una app web → copie el <code>firebaseConfig</code></li>
+        <li>Abra este archivo HTML con un editor de texto, busque <code>FIREBASE_CONFIG</code> cerca del final, y reemplace los valores <code>"PEGUE_AQUI..."</code> por los suyos</li>
+        <li>Guarde el archivo y ábralo en el navegador — debería decir "sincronizado" arriba a la derecha</li>
+      </ol>
+
+      <h4>Para usarlo desde el celular también</h4>
+      Suba este mismo archivo a GitHub Pages (igual que su arcada de juegos) y ábralo desde ahí en vez de como archivo local — evita restricciones de algunos navegadores con Firebase.
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   1. CONFIGURACIÓN DE FIREBASE — reemplace con los datos de SU
+      proyecto (Firebase Console → Configuración del proyecto →
+      Sus apps → Config del SDK).
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "PEGUE_AQUI_SU_API_KEY",
+  authDomain: "PEGUE_AQUI.firebaseapp.com",
+  databaseURL: "https://PEGUE_AQUI-default-rtdb.firebaseio.com",
+  projectId: "PEGUE_AQUI",
+  storageBucket: "PEGUE_AQUI.appspot.com",
+  messagingSenderId: "PEGUE_AQUI",
+  appId: "PEGUE_AQUI"
+};
+/* ============================================================ */
+
+const isConfigured = !FIREBASE_CONFIG.apiKey.includes("PEGUE_AQUI");
+
+if(!isConfigured){
+  document.getElementById('setup-check').innerHTML = `
+    <div class="setup-banner">
+      <h3>⚠ Falta conectar Firebase</h3>
+      Este panel todavía no tiene las credenciales de su proyecto de Firebase.
+      Reemplace el objeto <code>FIREBASE_CONFIG</code> en el código con los datos
+      de su proyecto (Firebase Console → ⚙ Configuración del proyecto → Sus apps → Config del SDK),
+      guarde el archivo, y ábralo de nuevo.
+      <br><br>
+      Recuerde también: habilitar <code>Realtime Database</code>, activar
+      <code>Authentication → Anonymous</code>, y pegar las reglas de seguridad
+      que le indicó Claude.
+    </div>`;
+} else {
+  document.getElementById('app').style.display = 'block';
+  initApp();
+}
+
+function initApp(){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const statusEl = document.getElementById('conn-status');
+
+  auth.signInAnonymously().catch(err=>{
+    statusEl.textContent = 'error auth';
+    statusEl.className = 'conn-status error';
+    console.error(err);
+  });
+
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      statusEl.textContent = 'sincronizado';
+      statusEl.className = 'conn-status connected';
+      attachListeners(db);
+    }
+  });
+
+  db.ref('.info/connected').on('value', snap=>{
+    if(snap.val() === false){
+      statusEl.textContent = 'sin conexión';
+      statusEl.className = 'conn-status pending';
+    }
+  });
+}
+
+/* ============================================================
+   2. ESTADO LOCAL (reflejo de Firebase, se actualiza vía listeners)
+   ============================================================ */
+let positions = {};
+let debts = {};
+let cashItems = {};
+let fixedAssets = {};
+let rentaItems = {};
+let budgetItems = {};
+let logItems = {};
+let settings = { monthlyEarned: 0, ingreso: 11000000 };
+
+const DEFAULT_SEED = {
+  positions: {
+    p1:{ ticker:'GOOGLCO', name:'Alphabet', qty:1, cost:1093200, current:1060000, floor:1040000, target:1208000 },
+    p2:{ ticker:'TSLACO', name:'Tesla (sobrevivió evento Cybercab)', qty:1, cost:1174640, current:1140000, floor:1100000, target:1290000 },
+    p3:{ ticker:'AMZNCO', name:'Amazon', qty:1, cost:838000, current:810780, floor:null, target:null },
+    p4:{ ticker:'NKECO', name:'Nike', qty:1, cost:128000, current:119220, floor:null, target:129500 },
+    p5:{ ticker:'SQMBCO', name:'SQM (9 vendidas a $245.000, queda 1)', qty:1, cost:231744, current:253000, floor:232488, target:null }
+  },
+  cash: {
+    c1:{ label:'Disponible en Trii', value:2198646 },
+    c2:{ label:'triirenta (Accival Vista)', value:775635 },
+    c3:{ label:'CDT Mibanco "loki" (12,8% E.A.)', value:3000000 },
+    c4:{ label:'CDT Bold', value:3000000 },
+    c5:{ label:'CDTs pequeños + Bold/Nubank/Nequi', value:1133998 },
+    c6:{ label:'Wenia — 300 USDW + 200 EURC', value:1697247 },
+    c7:{ label:'FMI Compensar (no líquido)', value:32726804 }
+  },
+  debts: {
+    d1:{ name:'Vehículo — Banco de Occidente', rate:'17,32% E.A.', original:90000000, balance:41500000 },
+    d2:{ name:'Vivienda — Banco de Bogotá', rate:'10,45% E.A. (no prepagar)', original:193410443, balance:37800000 },
+    d3:{ name:'Libranza Compensar', rate:'19,01% E.A.', original:28400000, balance:7778770 }
+  },
+  fixedAssets: {
+    a1:{ label:'Apartamento (valor comercial estimado)', value:0 },
+    a2:{ label:'Vehículo (valor comercial estimado)', value:0 }
+  },
+  renta: {
+    r1:{ label:'Patrimonio bruto declarado (año anterior)', value:0 },
+    r2:{ label:'Patrimonio líquido declarado', value:0 },
+    r3:{ label:'Ingresos declarados año gravable', value:0 },
+    r4:{ label:'Impuesto a cargo', value:0 }
+  },
+  budget: {
+    b1:{ label:'Apartamento', value:2300000 },
+    b2:{ label:'Carro', value:2000000 },
+    b3:{ label:'Comida', value:1500000 },
+    b4:{ label:'Club de golf', value:444000 },
+    b5:{ label:'Administración conjunto', value:468000 },
+    b6:{ label:'Gasolina', value:360000 },
+    b7:{ label:'Servicios (luz/gas/agua)', value:350000 },
+    b8:{ label:'Aporte FMI (nómina)', value:657532 },
+    b9:{ label:'Cuota libranza Compensar', value:733210 }
+  },
+  log: {
+    l1:{ ticker:'HISTÓRICO', note:'Jun 2023 – Ago 2026 acumulado: +$176.420 neto', ts:0 }
+  },
+  settings: { monthlyEarned: 0, ingreso: 11000000 }
+};
+
+let dbRef;
+
+function attachListeners(db){
+  dbRef = db;
+
+  db.ref('seeded').once('value', snap=>{
+    if(!snap.exists()){
+      db.ref('positions').set(DEFAULT_SEED.positions);
+      db.ref('cash').set(DEFAULT_SEED.cash);
+      db.ref('debts').set(DEFAULT_SEED.debts);
+      db.ref('fixedAssets').set(DEFAULT_SEED.fixedAssets);
+      db.ref('renta').set(DEFAULT_SEED.renta);
+      db.ref('budget').set(DEFAULT_SEED.budget);
+      db.ref('log').set(DEFAULT_SEED.log);
+      db.ref('settings').set(DEFAULT_SEED.settings);
+      db.ref('seeded').set(true);
+    }
+  });
+
+  db.ref('positions').on('value', snap=>{ positions = snap.val() || {}; renderPositions(); renderHeader(); renderNetWorth(); });
+  db.ref('cash').on('value', snap=>{ cashItems = snap.val() || {}; renderCash(); renderHeader(); renderNetWorth(); });
+  db.ref('debts').on('value', snap=>{ debts = snap.val() || {}; renderDebts(); renderNetWorth(); });
+  db.ref('fixedAssets').on('value', snap=>{ fixedAssets = snap.val() || {}; renderFixedAssets(); renderNetWorth(); });
+  db.ref('renta').on('value', snap=>{ rentaItems = snap.val() || {}; renderRenta(); });
+  db.ref('budget').on('value', snap=>{ budgetItems = snap.val() || {}; renderBudget(); });
+  db.ref('log').on('value', snap=>{ logItems = snap.val() || {}; renderLog(); });
+  db.ref('settings').on('value', snap=>{ settings = snap.val() || {monthlyEarned:0, ingreso:11000000}; renderGoal(); renderBudget(); });
+
+  renderCalendar();
+  document.getElementById('today-label').textContent = new Date().toLocaleDateString('es-CO', {day:'numeric', month:'short', year:'numeric'});
+}
+
+function fmt(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  const sign = n < 0 ? '-' : '';
+  return sign + '$' + Math.abs(Math.round(n)).toLocaleString('es-CO');
+}
+function fmtPct(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  const sign = n >= 0 ? '+' : '';
+  return sign + n.toFixed(2) + '%';
+}
+function genId(){ return dbRef.ref().push().key; }
+
+/* ---------- HEADER ---------- */
+function renderHeader(){
+  let totalValue = 0, totalPnl = 0;
+  Object.values(positions).forEach(p=>{
+    totalValue += (p.current||0) * (p.qty||0);
+    totalPnl += ((p.current||0) - (p.cost||0)) * (p.qty||0);
+  });
+  Object.values(cashItems).forEach(c=> totalValue += (c.value||0));
+
+  document.getElementById('hero-total').textContent = fmt(totalValue);
+  const pnlEl = document.getElementById('hero-pnl');
+  pnlEl.textContent = fmt(totalPnl);
+  pnlEl.style.color = totalPnl > 0 ? 'var(--pos)' : (totalPnl < 0 ? 'var(--neg)' : 'var(--text)');
+}
+
+/* ---------- PATRIMONIO NETO ---------- */
+function renderNetWorth(){
+  let assets = 0, debtsTotal = 0;
+  Object.values(cashItems).forEach(c => assets += (c.value||0));
+  Object.values(positions).forEach(p => assets += (p.current||0) * (p.qty||0));
+  Object.values(fixedAssets).forEach(a => assets += (a.value||0));
+  Object.values(debts).forEach(d => debtsTotal += (d.balance||0));
+
+  document.getElementById('nw-assets').textContent = fmt(assets);
+  document.getElementById('nw-debts').textContent = fmt(debtsTotal);
+  const netEl = document.getElementById('nw-total');
+  const net = assets - debtsTotal;
+  netEl.textContent = fmt(net);
+  netEl.style.color = net >= 0 ? 'var(--text)' : 'var(--neg)';
+}
+
+/* ---------- ACTIVOS FIJOS ---------- */
+function renderFixedAssets(){
+  const container = document.getElementById('fixedassets-container');
+  container.innerHTML = '';
+  let total = 0;
+  Object.entries(fixedAssets).forEach(([id, a])=>{
+    total += a.value || 0;
+    const row = document.createElement('div');
+    row.className = 'row-line';
+    row.innerHTML = `
+      <input type="text" class="row-label-input field" data-path="fixedAssets/${id}/label" value="${a.label||''}">
+      <input type="number" class="mono row-input field" data-path="fixedAssets/${id}/value" value="${a.value||0}">
+      <button class="del-btn" style="position:static;" onclick="deleteItem('fixedAssets','${id}')">×</button>
+    `;
+    container.appendChild(row);
+  });
+  document.getElementById('fixedassets-total').textContent = fmt(total);
+  bindFieldListeners(container);
+}
+function addFixedAsset(){
+  const id = genId();
+  dbRef.ref('fixedAssets/'+id).set({ label:'Nuevo activo', value:0 });
+}
+
+/* ---------- DECLARACIÓN DE RENTA ---------- */
+function renderRenta(){
+  const container = document.getElementById('renta-container');
+  container.innerHTML = '';
+  Object.entries(rentaItems).forEach(([id, r])=>{
+    const row = document.createElement('div');
+    row.className = 'row-line';
+    row.innerHTML = `
+      <input type="text" class="row-label-input field" data-path="renta/${id}/label" value="${r.label||''}">
+      <input type="number" class="mono row-input field" data-path="renta/${id}/value" value="${r.value||0}">
+      <button class="del-btn" style="position:static;" onclick="deleteItem('renta','${id}')">×</button>
+    `;
+    container.appendChild(row);
+  });
+  bindFieldListeners(container);
+}
+function addRentaItem(){
+  const id = genId();
+  dbRef.ref('renta/'+id).set({ label:'Nuevo dato', value:0 });
+}
+
+/* ---------- PRESUPUESTO MENSUAL ---------- */
+function renderBudget(){
+  const container = document.getElementById('budget-container');
+  container.innerHTML = '';
+  let totalGastos = 0;
+  Object.entries(budgetItems).forEach(([id, b])=>{
+    totalGastos += b.value || 0;
+    const row = document.createElement('div');
+    row.className = 'row-line';
+    row.innerHTML = `
+      <input type="text" class="row-label-input field" data-path="budget/${id}/label" value="${b.label||''}">
+      <input type="number" class="mono row-input field" data-path="budget/${id}/value" value="${b.value||0}">
+      <button class="del-btn" style="position:static;" onclick="deleteItem('budget','${id}')">×</button>
+    `;
+    container.appendChild(row);
+  });
+  bindFieldListeners(container);
+
+  const ingreso = settings.ingreso || 0;
+  const ingresoInp = document.getElementById('budget-ingreso-input');
+  if(document.activeElement !== ingresoInp) ingresoInp.value = ingreso;
+
+  const libre = ingreso - totalGastos;
+  const libreEl = document.getElementById('budget-libre');
+  libreEl.textContent = fmt(libre);
+  libreEl.style.color = libre >= 0 ? 'var(--pos)' : 'var(--neg)';
+}
+function addBudgetItem(){
+  const id = genId();
+  dbRef.ref('budget/'+id).set({ label:'Nuevo gasto', value:0 });
+}
+document.getElementById('budget-ingreso-input').addEventListener('input', e=>{
+  dbRef.ref('settings/ingreso').set(parseFloat(e.target.value)||0);
+});
+
+/* ---------- META ---------- */
+function renderGoal(){
+  const goalTarget = 127900;
+  const earned = settings.monthlyEarned || 0;
+  const pct = Math.min(100, (earned/goalTarget)*100);
+  document.getElementById('goal-bar').style.width = pct + '%';
+  document.getElementById('goal-pct').textContent = Math.round(pct) + '%';
+  const inp = document.getElementById('goal-earned');
+  if(document.activeElement !== inp) inp.value = earned;
+}
+document.getElementById('goal-earned').addEventListener('input', e=>{
+  dbRef.ref('settings/monthlyEarned').set(parseFloat(e.target.value)||0);
+});
+
+/* ---------- POSITIONS ---------- */
+function renderPositions(){
+  const container = document.getElementById('positions-container');
+  container.innerHTML = '';
+  Object.entries(positions).forEach(([id, p])=>{
+    const pnl = ((p.current||0) - (p.cost||0)) * (p.qty||1);
+    const pnlPct = p.cost ? (((p.current||0) - p.cost)/p.cost)*100 : 0;
+    const pnlColor = pnl > 0 ? 'var(--pos)' : (pnl < 0 ? 'var(--neg)' : 'var(--muted)');
+
+    let statusHtml = '';
+    if(p.floor && p.current <= p.floor){
+      statusHtml = `<div class="level-status warn">⚠ Tocó o rompió el piso ($${p.floor.toLocaleString('es-CO')})</div>`;
+    } else if(p.target && p.current >= p.target){
+      statusHtml = `<div class="level-status ok">✓ Alcanzó el objetivo ($${p.target.toLocaleString('es-CO')})</div>`;
+    } else if(p.floor || p.target){
+      statusHtml = `<div class="level-status neutral">En rango — sin tocar piso ni objetivo</div>`;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'position';
+    div.innerHTML = `
+      <button class="del-btn" onclick="deleteItem('positions','${id}')">×</button>
+      <div class="pos-head">
+        <div class="pos-ticker-row">
+          <input type="text" class="mono pos-ticker-input field" data-path="positions/${id}/ticker" value="${p.ticker||''}">
+        </div>
+        <div class="pos-pnl">
+          <div class="pos-pnl-val mono" style="color:${pnlColor}">${fmt(pnl)}</div>
+          <div class="pos-pnl-pct mono" style="color:${pnlColor}">${fmtPct(pnlPct)}</div>
+        </div>
+      </div>
+      <input type="text" class="pos-name-input field" data-path="positions/${id}/name" value="${p.name||''}" placeholder="Nombre empresa" style="margin-bottom:10px;">
+      <div class="qty-cost-row">
+        <div><span class="field-label">Cant.</span><input type="number" class="mono field" data-path="positions/${id}/qty" value="${p.qty||1}"></div>
+        <div><span class="field-label">Costo</span><input type="number" class="mono field" data-path="positions/${id}/cost" value="${p.cost||0}"></div>
+      </div>
+      <div class="pos-grid">
+        <div><span class="field-label">Precio actual</span><input type="number" class="mono field" data-path="positions/${id}/current" value="${p.current||0}"></div>
+        <div></div>
+      </div>
+      <div class="pos-levels">
+        <div><span class="field-label">Piso (salida)</span><input type="number" class="mono field" data-path="positions/${id}/floor" value="${p.floor ?? ''}" placeholder="sin definir"></div>
+        <div><span class="field-label">Objetivo (venta)</span><input type="number" class="mono field" data-path="positions/${id}/target" value="${p.target ?? ''}" placeholder="sin definir"></div>
+      </div>
+      ${statusHtml}
+    `;
+    container.appendChild(div);
+  });
+  bindFieldListeners(container);
+}
+
+function addPosition(){
+  const id = genId();
+  dbRef.ref('positions/'+id).set({ ticker:'NUEVO', name:'', qty:1, cost:0, current:0, floor:null, target:null });
+}
+
+/* ---------- CASH ---------- */
+function renderCash(){
+  const container = document.getElementById('cash-container');
+  container.innerHTML = '';
+  let total = 0;
+  Object.entries(cashItems).forEach(([id, c])=>{
+    total += c.value || 0;
+    const row = document.createElement('div');
+    row.className = 'row-line';
+    row.innerHTML = `
+      <input type="text" class="row-label-input field" data-path="cash/${id}/label" value="${c.label||''}">
+      <input type="number" class="mono row-input field" data-path="cash/${id}/value" value="${c.value||0}">
+      <button class="del-btn" style="position:static;" onclick="deleteItem('cash','${id}')">×</button>
+    `;
+    container.appendChild(row);
+  });
+  document.getElementById('cash-total').textContent = fmt(total);
+  bindFieldListeners(container);
+}
+function addCash(){
+  const id = genId();
+  dbRef.ref('cash/'+id).set({ label:'Nueva cuenta', value:0 });
+}
+
+/* ---------- DEBTS ---------- */
+function renderDebts(){
+  const container = document.getElementById('debts-container');
+  container.innerHTML = '';
+  Object.entries(debts).forEach(([id, d])=>{
+    const paidPct = d.original ? Math.min(100, ((d.original - d.balance)/d.original)*100) : 0;
+    const div = document.createElement('div');
+    div.className = 'debt-item';
+    div.innerHTML = `
+      <button class="del-btn" onclick="deleteItem('debts','${id}')">×</button>
+      <div class="debt-top">
+        <input type="text" class="debt-name-input field" data-path="debts/${id}/name" value="${d.name||''}">
+      </div>
+      <input type="text" class="debt-rate-input field" data-path="debts/${id}/rate" value="${d.rate||''}" style="margin-bottom:8px;">
+      <div class="debt-bar-track"><div class="debt-bar-fill" style="width:${paidPct}%"></div></div>
+      <div class="debt-figs"><span class="mono">Pagado ${Math.round(paidPct)}%</span><span class="mono">Saldo: ${fmt(d.balance)}</span></div>
+      <div class="debt-edit">
+        <div style="flex:1;"><label>Valor original</label><input type="number" class="mono field" data-path="debts/${id}/original" value="${d.original||0}"></div>
+        <div style="flex:1;"><label>Saldo actual</label><input type="number" class="mono field" data-path="debts/${id}/balance" value="${d.balance||0}"></div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  bindFieldListeners(container);
+}
+function addDebt(){
+  const id = genId();
+  dbRef.ref('debts/'+id).set({ name:'Nueva deuda', rate:'0% E.A.', original:0, balance:0 });
+}
+
+/* ---------- CALENDAR (estático, calcula días en vivo) ---------- */
+const catalysts = [
+  { date:'2026-09-11', label:'Inflación EE.UU. (CPI agosto)', ticker:'Todo el mercado' },
+  { date:'2026-09-16', label:'Decisión de la Fed', ticker:'Todo, especial tech/cripto' },
+  { date:'2026-10-03', label:'Tesla — entregas Q3', ticker:'TSLA' },
+  { date:'2026-10-22', label:'Tesla — resultados Q3', ticker:'TSLA' },
+  { date:'2026-10-29', label:'Resultados Q3', ticker:'GOOGL · MSFT · META · AMZN' },
+  { date:'2026-11-19', label:'Resultados Q3', ticker:'NVDA' }
+];
+function renderCalendar(){
+  const container = document.getElementById('calendar-container');
+  container.innerHTML = '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = catalysts.map(c=>{
+    const d = new Date(c.date+'T00:00:00');
+    const days = Math.ceil((d-today)/(1000*60*60*24));
+    return {...c, days, d};
+  }).filter(c=>c.days>=-1).sort((a,b)=>a.days-b.days);
+
+  upcoming.forEach((c,i)=>{
+    const isNext = i===0;
+    const div = document.createElement('div');
+    div.className = 'cal-item'+(isNext?' next':'');
+    const dateLabel = c.d.toLocaleDateString('es-CO',{day:'2-digit',month:'short'}).replace('.','');
+    let countLabel = c.days===0?'HOY':(c.days===1?'1 día':c.days+' días');
+    div.innerHTML = `
+      <div class="cal-date">${dateLabel}</div>
+      <div class="cal-body"><div class="cal-label">${c.label}</div><div class="cal-ticker">${c.ticker}</div></div>
+      <div class="cal-count ${c.days<=7?'soon':''}">${countLabel}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+/* ---------- LOG ---------- */
+function renderLog(){
+  const container = document.getElementById('log-container');
+  container.innerHTML = '';
+  const entries = Object.entries(logItems).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  if(entries.length===0){ container.innerHTML = '<div class="log-empty">Sin registros aún.</div>'; return; }
+  entries.forEach(([id, entry])=>{
+    const div = document.createElement('div');
+    div.className = 'log-item';
+    div.innerHTML = `<span><span class="mono" style="color:var(--accent);">${entry.ticker}</span> — ${entry.note}</span><span class="log-del" onclick="deleteItem('log','${id}')">×</span>`;
+    container.appendChild(div);
+  });
+}
+function addLogEntry(){
+  const ticker = document.getElementById('log-ticker').value.trim().toUpperCase();
+  const note = document.getElementById('log-note').value.trim();
+  if(!ticker || !note) return;
+  const id = genId();
+  dbRef.ref('log/'+id).set({ ticker, note, ts: Date.now() });
+  document.getElementById('log-ticker').value = '';
+  document.getElementById('log-note').value = '';
+}
+
+/* ---------- GENÉRICOS ---------- */
+function deleteItem(collection, id){
+  dbRef.ref(collection+'/'+id).remove();
+}
+
+function bindFieldListeners(container){
+  container.querySelectorAll('.field').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const path = e.target.dataset.path;
+      let val = e.target.value;
+      if(e.target.type === 'number'){
+        val = val === '' ? null : parseFloat(val);
+      }
+      dbRef.ref(path).set(val);
+    });
+  });
+}
+</script>
+
+</body>
+</html>
