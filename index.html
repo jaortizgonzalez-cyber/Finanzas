@@ -138,6 +138,22 @@
   .help-box code{background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent);}
   .help-box ol,.help-box ul{margin:4px 0;padding-left:18px;}
   .help-box li{margin-bottom:4px;}
+
+  .tabbar{
+    display:flex; overflow-x:auto; gap:4px; padding:10px 16px;
+    background:var(--panel); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:10; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    flex-shrink:0; background:transparent; border:1px solid var(--border); color:var(--muted);
+    font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:600;
+    padding:8px 14px; border-radius:20px; cursor:pointer; white-space:nowrap;
+  }
+  .tab-btn.active{background:var(--accent); border-color:var(--accent); color:#1a1408;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
 </style>
 </head>
 <body>
@@ -163,125 +179,171 @@
     </div>
   </section>
 
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Presupuesto mensual</div></div>
-    <div class="row-line" style="border-bottom:2px solid var(--accent);padding-bottom:12px;margin-bottom:4px;">
-      <span class="row-label" style="font-weight:600;">Ingreso (día 22)</span>
-      <input type="number" class="mono row-input field" data-path="budget/ingreso" id="budget-ingreso-input" value="11000000">
-    </div>
-    <div id="budget-container"></div>
-    <button class="btn-ghost" onclick="addBudgetItem()">+ Agregar gasto</button>
-    <div class="total-row">
-      <span>Libre al mes</span>
-      <span class="mono" id="budget-libre">$0</span>
-    </div>
-  </section>
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="resumen">📅 Resumen</button>
+    <button class="tab-btn" data-tab="presupuesto">💰 Presupuesto</button>
+    <button class="tab-btn" data-tab="inversiones">📈 Inversiones</button>
+    <button class="tab-btn" data-tab="patrimonio">🏦 Patrimonio</button>
+    <button class="tab-btn" data-tab="ayuda">❓ Ayuda</button>
+  </nav>
 
-  <section>
-    <div class="sec-title">Meta mensual</div>
-    <div class="goal-row" style="margin-top:12px;">
-      <span class="goal-label">Cubrir Claude + triipro ($127.900)</span>
-      <span class="mono" id="goal-pct">0%</span>
-    </div>
-    <div class="bar-track"><div class="bar-fill" id="goal-bar" style="width:0%"></div></div>
-    <div class="goal-input-row">
-      <label>Ganado este mes</label>
-      <input type="number" id="goal-earned" class="row-input" value="0">
-    </div>
-  </section>
+  <div class="tab-panel active" data-panel="resumen">
 
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Posiciones abiertas</div></div>
-    <div id="positions-container"></div>
-    <button class="btn-ghost" onclick="addPosition()">+ Agregar posición</button>
-  </section>
+    <section>
+      <div class="sec-title">Calendario de catalizadores</div>
+      <div id="calendar-container"></div>
+    </section>
 
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Liquidez</div></div>
-    <div id="cash-container"></div>
-    <div class="total-row"><span>Total líquido</span><span class="mono" id="cash-total">$0</span></div>
-    <button class="btn-ghost" onclick="addCash()">+ Agregar cuenta</button>
-  </section>
-
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Activos fijos (vivienda, vehículo, etc.)</div></div>
-    <div id="fixedassets-container"></div>
-    <div class="total-row"><span>Total activos fijos</span><span class="mono" id="fixedassets-total">$0</span></div>
-    <button class="btn-ghost" onclick="addFixedAsset()">+ Agregar activo</button>
-  </section>
-
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Deudas</div></div>
-    <div id="debts-container"></div>
-    <button class="btn-ghost" onclick="addDebt()">+ Agregar deuda</button>
-  </section>
-
-  <section>
-    <div class="sec-title-row"><div class="sec-title">Declaración de renta</div></div>
-    <div id="renta-container"></div>
-    <button class="btn-ghost" onclick="addRentaItem()">+ Agregar dato</button>
-  </section>
-
-  <section>
-    <div class="sec-title">Calendario de catalizadores</div>
-    <div id="calendar-container"></div>
-  </section>
-
-  <section>
-    <div class="sec-title">Patrón geopolítico activo</div>
-    <div class="pattern-box">
-      <div class="pattern-chain">
-        Conflicto Irán / Ormuz<span class="arrow">→</span>petróleo sube<span class="arrow">→</span>inflación esperada sube<span class="arrow">→</span>prob. de alza de tasas Fed sube<span class="arrow">→</span>bitcoin y tech caen juntos
+    <section>
+      <div class="sec-title">Patrón geopolítico activo</div>
+      <div class="pattern-box">
+        <div class="pattern-chain">
+          Conflicto Irán / Ormuz<span class="arrow">→</span>petróleo sube<span class="arrow">→</span>inflación esperada sube<span class="arrow">→</span>prob. de alza de tasas Fed sube<span class="arrow">→</span>bitcoin y tech caen juntos
+        </div>
+        <div class="pattern-note">Se ha repetido en feb, abr, may y sep 2026. Cada escalada: caída de 3-5% en horas. Cada pausa/tregua: rebote fuerte. Revisar antes de operar si hay noticia reciente de Ormuz.</div>
       </div>
-      <div class="pattern-note">Se ha repetido en feb, abr, may y sep 2026. Cada escalada: caída de 3-5% en horas. Cada pausa/tregua: rebote fuerte. Revisar antes de operar si hay noticia reciente de Ormuz.</div>
-    </div>
-  </section>
+    </section>
 
-  <section>
-    <div class="sec-title">Bitácora de operaciones</div>
-    <div class="log-form">
-      <input type="text" id="log-ticker" placeholder="Ticker">
-      <input type="text" id="log-note" placeholder="Resultado / nota">
-      <button class="btn" onclick="addLogEntry()">+</button>
-    </div>
-    <div id="log-container"></div>
-  </section>
+  </div>
 
-  <section>
-    <div class="sec-title">Cómo usar este panel</div>
-    <div class="help-box">
-      <h4>Actualizar un dato</h4>
-      Toque cualquier número o texto y escriba encima. Se guarda solo — no hay botón de guardar. El cambio aparece de inmediato en cualquier otro celular o computador donde tenga el panel abierto.
+  <div class="tab-panel" data-panel="presupuesto">
 
-      <h4>Agregar algo nuevo</h4>
-      Use los botones <code>+ Agregar...</code> al final de cada sección (posición, cuenta, deuda, activo, gasto). Crea una fila nueva en blanco lista para editar.
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Presupuesto mensual</div></div>
+      <div class="row-line" style="border-bottom:2px solid var(--accent);padding-bottom:12px;margin-bottom:4px;">
+        <span class="row-label" style="font-weight:600;">Ingreso (día 22)</span>
+        <input type="number" class="mono row-input field" data-path="budget/ingreso" id="budget-ingreso-input" value="11000000">
+      </div>
+      <div id="budget-container"></div>
+      <button class="btn-ghost" onclick="addBudgetItem()">+ Agregar gasto</button>
+      <div class="total-row">
+        <span>Libre al mes</span>
+        <span class="mono" id="budget-libre">$0</span>
+      </div>
+    </section>
 
-      <h4>Borrar algo</h4>
-      Toque la <code>×</code> junto al elemento. Es inmediato y no se puede deshacer.
+    <section>
+      <div class="sec-title">Meta mensual</div>
+      <div class="goal-row" style="margin-top:12px;">
+        <span class="goal-label">Cubrir Claude + triipro ($127.900)</span>
+        <span class="mono" id="goal-pct">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="goal-bar" style="width:0%"></div></div>
+      <div class="goal-input-row">
+        <label>Ganado este mes</label>
+        <input type="number" id="goal-earned" class="row-input" value="0">
+      </div>
+    </section>
 
-      <h4>Piso y objetivo de una posición</h4>
-      Son solo referencia visual — el panel le avisa con un color si el precio actual ya los tocó, pero no vende nada automáticamente. Usted sigue vendiendo desde Trii.
+  </div>
 
-      <h4>Cuando llegue la declaración de renta</h4>
-      Copie ahí el patrimonio bruto, patrimonio líquido, y cualquier activo (vivienda, vehículo) a su valor comercial real en la sección "Activos fijos" y "Declaración de renta". El patrimonio neto de arriba se recalcula solo.
+  <div class="tab-panel" data-panel="inversiones">
 
-      <h4>Primera vez conectando Firebase</h4>
-      <ol>
-        <li>Vaya a <code>console.firebase.google.com</code> → cree un proyecto</li>
-        <li>Build → <code>Realtime Database</code> → crear, modo bloqueado</li>
-        <li>En la pestaña Reglas, pegue:<br><code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code></li>
-        <li>Build → <code>Authentication</code> → Sign-in method → habilite <code>Anonymous</code></li>
-        <li>⚙ Configuración del proyecto → Sus apps → cree una app web → copie el <code>firebaseConfig</code></li>
-        <li>Abra este archivo HTML con un editor de texto, busque <code>FIREBASE_CONFIG</code> cerca del final, y reemplace los valores <code>"PEGUE_AQUI..."</code> por los suyos</li>
-        <li>Guarde el archivo y ábralo en el navegador — debería decir "sincronizado" arriba a la derecha</li>
-      </ol>
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Posiciones abiertas</div></div>
+      <div id="positions-container"></div>
+      <button class="btn-ghost" onclick="addPosition()">+ Agregar posición</button>
+    </section>
 
-      <h4>Para usarlo desde el celular también</h4>
-      Suba este mismo archivo a GitHub Pages (igual que su arcada de juegos) y ábralo desde ahí en vez de como archivo local — evita restricciones de algunos navegadores con Firebase.
-    </div>
-  </section>
+    <section>
+      <div class="sec-title">Bitácora de operaciones</div>
+      <div class="log-form">
+        <input type="text" id="log-ticker" placeholder="Ticker">
+        <input type="text" id="log-note" placeholder="Resultado / nota">
+        <button class="btn" onclick="addLogEntry()">+</button>
+      </div>
+      <div id="log-container"></div>
+    </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="patrimonio">
+
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Liquidez</div></div>
+      <div id="cash-container"></div>
+      <div class="total-row"><span>Total líquido</span><span class="mono" id="cash-total">$0</span></div>
+      <button class="btn-ghost" onclick="addCash()">+ Agregar cuenta</button>
+    </section>
+
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Activos fijos (vivienda, vehículo, etc.)</div></div>
+      <div id="fixedassets-container"></div>
+      <div class="total-row"><span>Total activos fijos</span><span class="mono" id="fixedassets-total">$0</span></div>
+      <button class="btn-ghost" onclick="addFixedAsset()">+ Agregar activo</button>
+    </section>
+
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Deudas</div></div>
+      <div id="debts-container"></div>
+      <button class="btn-ghost" onclick="addDebt()">+ Agregar deuda</button>
+    </section>
+
+    <section>
+      <div class="sec-title-row"><div class="sec-title">Declaración de renta</div></div>
+      <div id="renta-container"></div>
+      <button class="btn-ghost" onclick="addRentaItem()">+ Agregar dato</button>
+    </section>
+
+  </div>
+
+  <div class="tab-panel" data-panel="ayuda">
+
+    <section>
+      <div class="sec-title">Cómo usar este panel</div>
+      <div class="help-box">
+        <h4>Las pestañas de arriba</h4>
+        Resumen (calendario y contexto), Presupuesto (ingresos/gastos/meta), Inversiones (posiciones y bitácora), Patrimonio (liquidez, activos, deudas, renta). El patrimonio neto de arriba siempre está visible, sin importar la pestaña.
+
+        <h4>Actualizar un dato</h4>
+        Toque cualquier número o texto y escriba encima. Se guarda solo — no hay botón de guardar. El cambio aparece de inmediato en cualquier otro celular o computador donde tenga el panel abierto.
+
+        <h4>Agregar algo nuevo</h4>
+        Use los botones <code>+ Agregar...</code> al final de cada sección. Crea una fila nueva en blanco lista para editar.
+
+        <h4>Borrar algo</h4>
+        Toque la <code>×</code> junto al elemento. Es inmediato y no se puede deshacer.
+
+        <h4>Piso y objetivo de una posición</h4>
+        Son solo referencia visual — el panel le avisa con un color si el precio actual ya los tocó, pero no vende nada automáticamente. Usted sigue vendiendo desde Trii.
+
+        <h4>Cuando llegue la declaración de renta</h4>
+        Copie ahí el patrimonio bruto, patrimonio líquido, y el valor comercial real de vivienda/vehículo en "Activos fijos" y "Declaración de renta", dentro de la pestaña Patrimonio.
+
+        <h4>Primera vez conectando Firebase</h4>
+        <ol>
+          <li>Vaya a <code>console.firebase.google.com</code> → cree un proyecto</li>
+          <li>Build → <code>Realtime Database</code> → crear, modo bloqueado</li>
+          <li>En la pestaña Reglas, pegue:<br><code>{"rules":{".read":"auth != null",".write":"auth != null"}}</code></li>
+          <li>Build → <code>Authentication</code> → Sign-in method → habilite <code>Anonymous</code></li>
+          <li>⚙ Configuración del proyecto → Sus apps → cree una app web → copie el <code>firebaseConfig</code></li>
+          <li>Abra este archivo HTML con un editor de texto, busque <code>FIREBASE_CONFIG</code> cerca del final, y reemplace los valores <code>"PEGUE_AQUI..."</code> por los suyos</li>
+          <li>Guarde el archivo y ábralo en el navegador — debería decir "sincronizado" arriba a la derecha</li>
+        </ol>
+
+        <h4>Para usarlo desde el celular también</h4>
+        Suba este mismo archivo a GitHub Pages (igual que su arcada de juegos) y ábralo desde ahí en vez de como archivo local — evita restricciones de algunos navegadores con Firebase.
+
+        <h4>Si algo se ve raro (cajas vacías, datos viejos)</h4>
+        Cierre por completo la pestaña del navegador y vuelva a abrir el archivo. Los navegadores guardan copias viejas en caché y a veces no se actualizan solo con recargar.
+      </div>
+    </section>
+
+  </div>
 
 </div>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+    window.scrollTo({top:0, behavior:'instant'});
+  });
+});
+</script>
 
 <script>
 /* ============================================================
@@ -494,7 +556,7 @@ function renderFixedAssets(){
     const row = document.createElement('div');
     row.className = 'row-line';
     row.innerHTML = `
-      <input type="text" class="row-label-input field" data-path="fixedAssets/${id}/label" value="${a.label||''}">
+      <input type="text" class="row-label-input field" data-path="fixedAssets/${id}/label" value="${a.label||''}" placeholder="Nombre del activo">
       <input type="number" class="mono row-input field" data-path="fixedAssets/${id}/value" value="${a.value||0}">
       <button class="del-btn" style="position:static;" onclick="deleteItem('fixedAssets','${id}')">×</button>
     `;
@@ -516,7 +578,7 @@ function renderRenta(){
     const row = document.createElement('div');
     row.className = 'row-line';
     row.innerHTML = `
-      <input type="text" class="row-label-input field" data-path="renta/${id}/label" value="${r.label||''}">
+      <input type="text" class="row-label-input field" data-path="renta/${id}/label" value="${r.label||''}" placeholder="Nombre del dato">
       <input type="number" class="mono row-input field" data-path="renta/${id}/value" value="${r.value||0}">
       <button class="del-btn" style="position:static;" onclick="deleteItem('renta','${id}')">×</button>
     `;
@@ -539,7 +601,7 @@ function renderBudget(){
     const row = document.createElement('div');
     row.className = 'row-line';
     row.innerHTML = `
-      <input type="text" class="row-label-input field" data-path="budget/${id}/label" value="${b.label||''}">
+      <input type="text" class="row-label-input field" data-path="budget/${id}/label" value="${b.label||''}" placeholder="Nombre del gasto">
       <input type="number" class="mono row-input field" data-path="budget/${id}/value" value="${b.value||0}">
       <button class="del-btn" style="position:static;" onclick="deleteItem('budget','${id}')">×</button>
     `;
@@ -644,7 +706,7 @@ function renderCash(){
     const row = document.createElement('div');
     row.className = 'row-line';
     row.innerHTML = `
-      <input type="text" class="row-label-input field" data-path="cash/${id}/label" value="${c.label||''}">
+      <input type="text" class="row-label-input field" data-path="cash/${id}/label" value="${c.label||''}" placeholder="Nombre de la cuenta">
       <input type="number" class="mono row-input field" data-path="cash/${id}/value" value="${c.value||0}">
       <button class="del-btn" style="position:static;" onclick="deleteItem('cash','${id}')">×</button>
     `;
